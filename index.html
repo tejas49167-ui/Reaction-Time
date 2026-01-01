@@ -75,13 +75,6 @@
       text-align: center;
     }
 
-    .hint {
-      margin-top: 30px;
-      font-size: 14px;
-      color: var(--muted);
-      text-align: center;
-    }
-
     button {
       margin-top: 28px;
       padding: 10px 22px;
@@ -96,44 +89,68 @@
     button:hover {
       background: #1a1a1a;
     }
+
+    .hint {
+      margin-top: 30px;
+      font-size: 14px;
+      color: var(--muted);
+      text-align: center;
+    }
   </style>
 </head>
 <body>
 
-  <h1>Formula 1 Start Lights</h1>
+<h1>Formula 1 Start Lights</h1>
 
-  <div class="lights" id="lights">
-    <div class="light"></div>
-    <div class="light"></div>
-    <div class="light"></div>
-    <div class="light"></div>
-    <div class="light"></div>
-  </div>
+<div class="lights">
+  <div class="light"></div>
+  <div class="light"></div>
+  <div class="light"></div>
+  <div class="light"></div>
+  <div class="light"></div>
+</div>
 
-  <div class="info" id="info">Press START to begin</div>
-  <div class="result" id="result"></div>
+<div class="info" id="info">Press START to begin</div>
+<div class="result" id="result"></div>
 
-  <button id="startBtn">START</button>
+<button id="startBtn">START</button>
 
-  <div class="hint">
-    Press <strong>SPACE</strong> or tap the screen when the lights go out
-  </div>
+<div class="hint">
+  Press <strong>SPACE</strong> or tap the screen when the lights go out
+</div>
+
+<!-- AUDIO -->
+<audio id="musicFast" preload="auto" src="music1.wav"></audio>
+<audio id="musicMedium" preload="auto" src="music2.wav"></audio>
+<audio id="musicSlow" preload="auto" src="music3.wav"></audio>
+<audio id="musicFalse" preload="auto" src="music4.wav"></audio>
 
 <script>
 (() => {
-  const lights = Array.from(document.querySelectorAll('.light'));
+  const lights = document.querySelectorAll('.light');
   const infoEl = document.getElementById('info');
   const resultEl = document.getElementById('result');
   const startBtn = document.getElementById('startBtn');
 
-  const LIGHT_INTERVAL = 1000; // real F1-like pacing
-  const RANDOM_DELAY_MIN = 500;
-  const RANDOM_DELAY_MAX = 2000;
+  const musicFast = document.getElementById('musicFast');
+  const musicMedium = document.getElementById('musicMedium');
+  const musicSlow = document.getElementById('musicSlow');
+  const musicFalse = document.getElementById('musicFalse');
+
+  const LIGHT_INTERVAL = 1000;
+  const RANDOM_MIN = 500;
+  const RANDOM_MAX = 2000;
 
   let state = 'idle';
   let lightsOutTime = 0;
-  let falseStart = false;
   let timers = [];
+
+  function stopAllMusic() {
+    [musicFast, musicMedium, musicSlow, musicFalse].forEach(m => {
+      m.pause();
+      m.currentTime = 0;
+    });
+  }
 
   function clearTimers() {
     timers.forEach(t => clearTimeout(t));
@@ -142,12 +159,11 @@
 
   function reset() {
     clearTimers();
+    stopAllMusic();
     lights.forEach(l => l.classList.remove('on'));
     infoEl.textContent = 'Press START to begin';
     resultEl.textContent = '';
     state = 'idle';
-    falseStart = false;
-    lightsOutTime = 0;
   }
 
   function startSequence() {
@@ -155,37 +171,26 @@
     state = 'loading';
     infoEl.textContent = 'Get ready...';
 
-    lights.forEach(l => l.classList.remove('on'));
-
-    // Turn on lights one by one
-    lights.forEach((light, index) => {
-      const t = setTimeout(() => {
+    lights.forEach((light, i) => {
+      timers.push(setTimeout(() => {
         light.classList.add('on');
-      }, (index + 1) * LIGHT_INTERVAL);
-      timers.push(t);
+      }, (i + 1) * LIGHT_INTERVAL));
     });
 
-    // After all lights are on
     const totalOnTime = lights.length * LIGHT_INTERVAL;
-    const randomDelay =
-      RANDOM_DELAY_MIN +
-      Math.random() * (RANDOM_DELAY_MAX - RANDOM_DELAY_MIN);
+    const randomDelay = RANDOM_MIN + Math.random() * (RANDOM_MAX - RANDOM_MIN);
 
-    const waitTimer = setTimeout(() => {
+    timers.push(setTimeout(() => {
       state = 'waiting';
 
-      const outTimer = setTimeout(() => {
-        // LIGHTS OUT
+      timers.push(setTimeout(() => {
         lights.forEach(l => l.classList.remove('on'));
         lightsOutTime = performance.now();
         state = 'lightsOut';
         infoEl.textContent = 'REACT!';
-      }, randomDelay);
+      }, randomDelay));
 
-      timers.push(outTimer);
-    }, totalOnTime);
-
-    timers.push(waitTimer);
+    }, totalOnTime));
   }
 
   function handleReaction() {
@@ -193,43 +198,52 @@
 
     const now = performance.now();
 
+    // FALSE START
     if (state === 'loading' || state === 'waiting') {
-      falseStart = true;
       state = 'result';
-      infoEl.textContent = '';
-      resultEl.textContent = 'FALSE START – NOT GOOD';
       clearTimers();
       lights.forEach(l => l.classList.remove('on'));
+      infoEl.textContent = '';
+      resultEl.textContent = 'FALSE START – NOT GOOD';
+      stopAllMusic();
+      musicFalse.play();
       return;
     }
 
+    // VALID REACTION
     if (state === 'lightsOut') {
       const reaction = now - lightsOutTime;
       state = 'result';
       infoEl.textContent = '';
+      stopAllMusic();
 
       let label = '';
-      if (reaction < 150) label = 'God Level';
-      else if (reaction < 250) label = 'Fast';
-      else if (reaction < 400) label = 'Medium';
-      else label = 'Slow';
+      if (reaction < 150) {
+        label = 'God Level';
+        musicFast.play();
+      } else if (reaction < 250) {
+        label = 'Fast';
+        musicFast.play();
+      } else if (reaction < 400) {
+        label = 'Medium';
+        musicMedium.play();
+      } else {
+        label = 'Slow';
+        musicSlow.play();
+      }
 
-      resultEl.textContent =
-        `${label} — ${reaction.toFixed(1)} ms`;
+      resultEl.textContent = `${label} — ${reaction.toFixed(1)} ms`;
     }
   }
 
   startBtn.addEventListener('click', startSequence);
-
-  window.addEventListener('keydown', (e) => {
+  window.addEventListener('keydown', e => {
     if (e.code === 'Space') {
       e.preventDefault();
       handleReaction();
     }
   });
-
   window.addEventListener('touchstart', handleReaction);
-
 })();
 </script>
 
