@@ -9,7 +9,7 @@
     :root {
       --red-off: #3d3b3b;
       --red-on: #ff0000;
-      --bg: #3d3c3c;
+      --bg: #0B0B0B;
       --text: #ffffff;
       --muted: #aaaaaa;
     }
@@ -209,10 +209,10 @@
       infoEl.textContent = '';
 
       let label = '';
-      if (reaction < 150) label = 'God Level';
-      else if (reaction < 250) label = 'Fast';
-      else if (reaction < 400) label = 'Medium';
-      else label = 'Slow';
+      if (reaction < 150) label = 'God Level 🏎️💀🔥';
+      else if (reaction < 250) label = 'Fast🔥';
+      else if (reaction < 400) label = 'Medium😑';
+      else label = 'Slow🤮';
 
       resultEl.textContent =
         `${label} — ${reaction.toFixed(1)} ms`;
